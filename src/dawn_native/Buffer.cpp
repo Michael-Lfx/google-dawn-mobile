@@ -147,15 +147,6 @@ namespace dawn_native {
         return ErrorBuffer::MakeMapped(device, size, mappedPointer);
     }
 
-    uint64_t BufferBase::GetSize() const {
-        ASSERT(!IsError());
-        return mSize;
-    }
-
-    wgpu::BufferUsage BufferBase::GetUsage() const {
-        ASSERT(!IsError());
-        return mUsage;
-    }
 
     MaybeError BufferBase::MapAtCreation(uint8_t** mappedPointer) {
         ASSERT(!IsError());

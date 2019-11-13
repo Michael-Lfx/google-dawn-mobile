@@ -14,8 +14,29 @@
 
 #include "dawn_native/vulkan/VulkanFunctions.h"
 
+#include <pthread.h>
+
 #include "common/DynamicLib.h"
 #include "dawn_native/vulkan/VulkanInfo.h"
+
+namespace {
+
+pthread_mutex_t g_vk_queue_submit_lock;
+
+PFN_vkQueueSubmit g_native_vk_queue_submit_fn = nullptr;
+
+VkResult vkQueueSubmit_ThreadSafe(
+    VkQueue queue,
+    uint32_t submitCount,
+    const VkSubmitInfo* pSubmits,
+    VkFence fence) {
+  pthread_mutex_lock(&g_vk_queue_submit_lock);
+  VkResult r = g_native_vk_queue_submit_fn(queue, submitCount, pSubmits, fence);
+  pthread_mutex_unlock(&g_vk_queue_submit_lock);
+  return r;
+}
+
+}
 
 namespace dawn_native { namespace vulkan {
 
@@ -229,6 +250,11 @@ namespace dawn_native { namespace vulkan {
         GET_DEVICE_PROC(MergePipelineCaches);
         GET_DEVICE_PROC(QueueBindSparse);
         GET_DEVICE_PROC(QueueSubmit);
+        {
+          // Hack to make using single queue on multiple threads safe.
+          g_native_vk_queue_submit_fn = QueueSubmit;
+          QueueSubmit = &vkQueueSubmit_ThreadSafe;
+        }
         GET_DEVICE_PROC(QueueWaitIdle);
         GET_DEVICE_PROC(ResetCommandBuffer);
         GET_DEVICE_PROC(ResetCommandPool);

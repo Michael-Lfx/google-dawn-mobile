@@ -419,6 +419,19 @@ namespace dawn_native { namespace vulkan {
         return texture.release();
     }
 
+    ResultOrError<Texture*> Texture::CreateFromVkImage(
+            Device* device,
+            const ExternalImageDescriptor* descriptor,
+            const TextureDescriptor* textureDescriptor,
+            VkImage image,
+            std::vector<VkSemaphore> waitSemaphores) {
+        std::unique_ptr<Texture> texture =
+            std::make_unique<Texture>(device, textureDescriptor, image);
+        DAWN_TRY(texture->InitializeFromVkImage(
+            descriptor, image, std::move((waitSemaphores))));
+        return texture.release();
+    }
+
     MaybeError Texture::InitializeAsInternalTexture() {
         Device* device = ToBackend(GetDevice());
 
@@ -483,17 +496,41 @@ namespace dawn_native { namespace vulkan {
         : TextureBase(device, descriptor, TextureState::OwnedExternal), mHandle(nativeImage) {
     }
 
+    MaybeError Texture::SyncFromExternal(std::vector<VkSemaphore> waitSemaphores) {
+        //fprintf(stderr, "SyncFromExternal this=%p state%d\n", this, (int)mExternalState);
+
+        //if (mExternalState != ExternalState::Released)
+        //  return {};
+        //mExternalState = ExternalState::InternalOnly;
+        //mSignalSemaphore = signalSemaphore;
+        mWaitRequirements = std::move(waitSemaphores);
+
+        //mRecordingContext.waitSemaphores.insert(mRecordingContext.waitSemaphores.end(),
+        //                                        waitSemaphores.begin(), waitSemaphores.end());
+
+        Device* device = ToBackend(GetDevice());
+        TransitionUsageNow(device->GetPendingRecordingContext(), wgpu::TextureUsage::Sampled);
+
+        return {};
+    }
     // Internally managed, but imported from external handle
     MaybeError Texture::InitializeFromExternal(const ExternalImageDescriptor* descriptor,
                                                VkSemaphore signalSemaphore,
                                                VkDeviceMemory externalMemoryAllocation,
                                                std::vector<VkSemaphore> waitSemaphores) {
+        //fprintf(stderr, "InitializeFromExternal this=%p state=%d\n", this, (int)mExternalState);
         mExternalState = ExternalState::PendingAcquire;
         Device* device = ToBackend(GetDevice());
 
+        VkExternalMemoryImageCreateInfoKHR externalInfo = {};
+        externalInfo.sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO_KHR;
+        // Only works for Linux/X11.
+        // Use VK_EXTERNAL_MEMORY_HANDLE_TYPE_D3D11_TEXTURE_BIT on Windows.
+        externalInfo.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT;
+
         VkImageCreateInfo createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        createInfo.pNext = nullptr;
+        createInfo.pNext = &externalInfo;
         createInfo.flags = VK_IMAGE_CREATE_ALIAS_BIT_KHR;
         createInfo.imageType = VulkanImageType(GetDimension());
         createInfo.format = VulkanImageFormat(GetFormat().format);
@@ -536,40 +573,61 @@ namespace dawn_native { namespace vulkan {
 
         // Success, acquire all the external objects.
         mExternalAllocation = externalMemoryAllocation;
-        mSignalSemaphore = signalSemaphore;
+        //mSignalSemaphore = signalSemaphore;
         mWaitRequirements = std::move(waitSemaphores);
 
         return {};
     }
 
-    MaybeError Texture::SignalAndDestroy(VkSemaphore* outSignalSemaphore) {
+    MaybeError Texture::InitializeFromVkImage(const ExternalImageDescriptor* descriptor,
+                                          VkImage image,
+                                          std::vector<VkSemaphore> waitSemaphores) {
+        // Don't clear imported texture if already cleared
+        if (descriptor->isCleared) {
+            SetIsSubresourceContentInitialized(true, 0, 1, 0, 1);
+        }
+
+        //mExternalState = ExternalState::Acquired;
+        mExternalState = ExternalState::InternalOnly;
+        mWaitRequirements = std::move(waitSemaphores);
+
+        return {};
+    }
+
+    MaybeError Texture::Signal(VkSemaphore* outSignalSemaphore, bool destroy) {
         Device* device = ToBackend(GetDevice());
+
+        //fprintf(stderr, "Signal this=%p state=%d destroy=%d\n", this, (int)mExternalState, destroy);
 
         if (mExternalState == ExternalState::Released) {
             return DAWN_VALIDATION_ERROR("Can't export signal semaphore from signaled texture");
         }
 
-        if (mExternalAllocation == VK_NULL_HANDLE) {
-            return DAWN_VALIDATION_ERROR(
-                "Can't export signal semaphore from destroyed / non-external texture");
+        //if (mExternalAllocation == VK_NULL_HANDLE) {
+        //    return DAWN_VALIDATION_ERROR(
+        //        "Can't export signal semaphore from destroyed / non-external texture");
+        //}
+
+        ASSERT(*outSignalSemaphore != VK_NULL_HANDLE);
+
+         if (destroy) {
+            // Release the texture
+            //mExternalState = ExternalState::PendingRelease;
+            TransitionUsageNow(device->GetPendingRecordingContext(), wgpu::TextureUsage::None);
         }
 
-        ASSERT(mSignalSemaphore != VK_NULL_HANDLE);
-
-        // Release the texture
-        mExternalState = ExternalState::PendingRelease;
-        TransitionUsageNow(device->GetPendingRecordingContext(), wgpu::TextureUsage::None);
-
         // Queue submit to signal we are done with the texture
-        device->GetPendingRecordingContext()->signalSemaphores.push_back(mSignalSemaphore);
+        device->GetPendingRecordingContext()->signalSemaphores.push_back(*outSignalSemaphore);
         DAWN_TRY(device->SubmitPendingCommands());
 
         // Write out the signal semaphore
-        *outSignalSemaphore = mSignalSemaphore;
-        mSignalSemaphore = VK_NULL_HANDLE;
+        //*outSignalSemaphore = mSignalSemaphore;
+        //mSignalSemaphore = VK_NULL_HANDLE;
 
-        // Destroy the texture so it can't be used again
-        DestroyInternal();
+        if (destroy) {
+            // Destroy the texture so it can't be used again
+            DestroyInternal();
+        }
         return {};
     }
 

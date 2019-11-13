@@ -25,12 +25,5 @@ namespace dawn_native {
     ObjectBase::~ObjectBase() {
     }
 
-    DeviceBase* ObjectBase::GetDevice() const {
-        return mDevice;
-    }
-
-    bool ObjectBase::IsError() const {
-        return mIsError;
-    }
 
 }  // namespace dawn_native

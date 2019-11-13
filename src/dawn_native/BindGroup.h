@@ -21,6 +21,10 @@
 #include "dawn_native/Forward.h"
 #include "dawn_native/ObjectBase.h"
 
+#include "dawn_native/Buffer.h"
+#include "dawn_native/Sampler.h"
+#include "dawn_native/Texture.h"
+
 #include "dawn_native/dawn_platform.h"
 
 #include <array>
@@ -44,10 +48,36 @@ namespace dawn_native {
 
         static BindGroupBase* MakeError(DeviceBase* device);
 
-        BindGroupLayoutBase* GetLayout();
-        BufferBinding GetBindingAsBufferBinding(size_t binding);
-        SamplerBase* GetBindingAsSampler(size_t binding);
-        TextureViewBase* GetBindingAsTextureView(size_t binding);
+        inline BindGroupLayoutBase* GetLayout() {
+            ASSERT(!IsError());
+            return mLayout.Get();
+        }
+
+        inline BufferBinding GetBindingAsBufferBinding(size_t binding) {
+            ASSERT(!IsError());
+            ASSERT(binding < kMaxBindingsPerGroup);
+            ASSERT(mLayout->GetBindingInfo().mask[binding]);
+            ASSERT(mLayout->GetBindingInfo().types[binding] == wgpu::BindingType::UniformBuffer ||
+                   mLayout->GetBindingInfo().types[binding] == wgpu::BindingType::StorageBuffer);
+            BufferBase* buffer = static_cast<BufferBase*>(mBindings[binding].Get());
+            return {buffer, mOffsets[binding], mSizes[binding]};
+        }
+
+        inline SamplerBase* GetBindingAsSampler(size_t binding) {
+            ASSERT(!IsError());
+            ASSERT(binding < kMaxBindingsPerGroup);
+            ASSERT(mLayout->GetBindingInfo().mask[binding]);
+            ASSERT(mLayout->GetBindingInfo().types[binding] == wgpu::BindingType::Sampler);
+            return static_cast<SamplerBase*>(mBindings[binding].Get());
+        }
+
+        inline TextureViewBase* GetBindingAsTextureView(size_t binding) {
+            ASSERT(!IsError());
+            ASSERT(binding < kMaxBindingsPerGroup);
+            ASSERT(mLayout->GetBindingInfo().mask[binding]);
+            ASSERT(mLayout->GetBindingInfo().types[binding] == wgpu::BindingType::SampledTexture);
+            return static_cast<TextureViewBase*>(mBindings[binding].Get());
+        }
 
       private:
         BindGroupBase(DeviceBase* device, ObjectBase::ErrorTag tag);

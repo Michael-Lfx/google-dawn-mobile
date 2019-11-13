@@ -74,40 +74,6 @@ uint64_t NextPowerOfTwo(uint64_t n) {
 #endif
 }
 
-bool IsPowerOfTwo(uint64_t n) {
-    ASSERT(n != 0);
-    return (n & (n - 1)) == 0;
-}
-
-bool IsPtrAligned(const void* ptr, size_t alignment) {
-    ASSERT(IsPowerOfTwo(alignment));
-    ASSERT(alignment != 0);
-    return (reinterpret_cast<size_t>(ptr) & (alignment - 1)) == 0;
-}
-
-void* AlignVoidPtr(void* ptr, size_t alignment) {
-    ASSERT(IsPowerOfTwo(alignment));
-    ASSERT(alignment != 0);
-    return reinterpret_cast<void*>((reinterpret_cast<size_t>(ptr) + (alignment - 1)) &
-                                   ~(alignment - 1));
-}
-
-bool IsAligned(uint32_t value, size_t alignment) {
-    ASSERT(alignment <= UINT32_MAX);
-    ASSERT(IsPowerOfTwo(alignment));
-    ASSERT(alignment != 0);
-    uint32_t alignment32 = static_cast<uint32_t>(alignment);
-    return (value & (alignment32 - 1)) == 0;
-}
-
-uint32_t Align(uint32_t value, size_t alignment) {
-    ASSERT(alignment <= UINT32_MAX);
-    ASSERT(IsPowerOfTwo(alignment));
-    ASSERT(alignment != 0);
-    uint32_t alignment32 = static_cast<uint32_t>(alignment);
-    return (value + (alignment32 - 1)) & ~(alignment32 - 1);
-}
-
 uint16_t Float32ToFloat16(float fp32) {
     uint32_t fp32i = BitCast<uint32_t>(fp32);
     uint32_t sign16 = (fp32i & 0x80000000) >> 16;

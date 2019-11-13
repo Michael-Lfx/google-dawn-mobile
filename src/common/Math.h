@@ -22,17 +22,55 @@
 #include <limits>
 #include <type_traits>
 
+#include "common/Assert.h"
+
 // The following are not valid for 0
 uint32_t ScanForward(uint32_t bits);
 uint32_t Log2(uint32_t value);
 uint32_t Log2(uint64_t value);
-bool IsPowerOfTwo(uint64_t n);
 
 uint64_t NextPowerOfTwo(uint64_t n);
-bool IsPtrAligned(const void* ptr, size_t alignment);
-void* AlignVoidPtr(void* ptr, size_t alignment);
-bool IsAligned(uint32_t value, size_t alignment);
-uint32_t Align(uint32_t value, size_t alignment);
+
+// bool IsPowerOfTwo(size_t n);
+
+inline bool IsPowerOfTwo(uint64_t n) {
+    ASSERT(n != 0);
+    return (n & (n - 1)) == 0;
+}
+
+inline bool IsPtrAligned(const void* ptr, size_t alignment) {
+    ASSERT(IsPowerOfTwo(alignment));
+    ASSERT(alignment != 0);
+    return (reinterpret_cast<size_t>(ptr) & (alignment - 1)) == 0;
+}
+
+inline void* AlignVoidPtr(void* ptr, size_t alignment) {
+    ASSERT(IsPowerOfTwo(alignment));
+    ASSERT(alignment != 0);
+    return reinterpret_cast<void*>((reinterpret_cast<size_t>(ptr) + (alignment - 1)) &
+                                   ~(alignment - 1));
+}
+
+inline bool IsAligned(uint32_t value, size_t alignment) {
+    ASSERT(alignment <= UINT32_MAX);
+    ASSERT(IsPowerOfTwo(alignment));
+    ASSERT(alignment != 0);
+    uint32_t alignment32 = static_cast<uint32_t>(alignment);
+    return (value & (alignment32 - 1)) == 0;
+}
+
+inline uint32_t Align(uint32_t value, size_t alignment) {
+    ASSERT(alignment <= UINT32_MAX);
+    ASSERT(IsPowerOfTwo(alignment));
+    ASSERT(alignment != 0);
+    uint32_t alignment32 = static_cast<uint32_t>(alignment);
+    return (value + (alignment32 - 1)) & ~(alignment32 - 1);
+}
+
+// bool IsPtrAligned(const void* ptr, size_t alignment);
+// void* AlignVoidPtr(void* ptr, size_t alignment);
+// bool IsAligned(uint32_t value, size_t alignment);
+// uint32_t Align(uint32_t value, size_t alignment);
 
 template <typename T>
 T* AlignPtr(T* ptr, size_t alignment) {

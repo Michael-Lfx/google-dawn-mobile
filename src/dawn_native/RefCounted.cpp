@@ -24,22 +24,4 @@ namespace dawn_native {
     RefCounted::~RefCounted() {
     }
 
-    uint64_t RefCounted::GetRefCount() const {
-        return mRefCount;
-    }
-
-    void RefCounted::Reference() {
-        ASSERT(mRefCount != 0);
-        mRefCount++;
-    }
-
-    void RefCounted::Release() {
-        ASSERT(mRefCount != 0);
-
-        mRefCount--;
-        if (mRefCount == 0) {
-            delete this;
-        }
-    }
-
 }  // namespace dawn_native

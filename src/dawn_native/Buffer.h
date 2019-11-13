@@ -54,8 +54,15 @@ namespace dawn_native {
                                            uint64_t size,
                                            uint8_t** mappedPointer);
 
-        uint64_t GetSize() const;
-        wgpu::BufferUsage GetUsage() const;
+        inline uint64_t GetSize() const {
+            ASSERT(!IsError());
+            return mSize;
+        }
+
+        inline wgpu::BufferUsage GetUsage() const {
+            ASSERT(!IsError());
+            return mUsage;
+        }
 
         MaybeError MapAtCreation(uint8_t** mappedPointer);
 

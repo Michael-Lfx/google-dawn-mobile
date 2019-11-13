@@ -33,6 +33,16 @@ namespace dawn_native { namespace vulkan {
         return backendDevice->GetVkInstance();
     }
 
+    VkDevice GetDevice(WGPUDevice device) {
+        Device* backendDevice = reinterpret_cast<Device*>(device);
+        return backendDevice->GetVkDevice();
+    }
+
+    VkQueue GetQueue(WGPUDevice device) {
+        Device* backendDevice = reinterpret_cast<Device*>(device);
+        return backendDevice->GetQueue();
+    }
+
     DAWN_NATIVE_EXPORT PFN_vkVoidFunction GetInstanceProcAddr(WGPUDevice device,
                                                               const char* pName) {
         Device* backendDevice = reinterpret_cast<Device*>(device);
@@ -61,16 +71,26 @@ namespace dawn_native { namespace vulkan {
 
 #ifdef DAWN_PLATFORM_LINUX
     WGPUTexture WrapVulkanImageOpaqueFD(WGPUDevice cDevice,
+                                        WGPUTexture cTexture,
                                         const ExternalImageDescriptorOpaqueFD* descriptor) {
         Device* device = reinterpret_cast<Device*>(cDevice);
+        Texture* texture = reinterpret_cast<Texture*>(cTexture);
 
-        TextureBase* texture = device->CreateTextureWrappingVulkanImage(
-            descriptor, descriptor->memoryFD, descriptor->waitFDs);
+        TextureBase* textureOut = device->CreateTextureWrappingVulkanImage(
+            texture, descriptor, descriptor->memoryFD, descriptor->waitFDs);
 
-        return reinterpret_cast<WGPUTexture>(texture);
+        return reinterpret_cast<WGPUTexture>(textureOut);
     }
 
-    int ExportSignalSemaphoreOpaqueFD(WGPUDevice cDevice, WGPUTexture cTexture) {
+    void ImportImageWaitFDs(WGPUDevice cDevice, WGPUTexture cTexture, std::vector<int> waitFDs) {
+        Device* device = reinterpret_cast<Device*>(cDevice);
+        Texture* texture = reinterpret_cast<Texture*>(cTexture);
+
+        MaybeError result = device->ImportImageWaitFDs(texture, waitFDs);
+        (void)result;
+    }
+
+    int ExportSignalSemaphoreOpaqueFD(WGPUDevice cDevice, WGPUTexture cTexture, bool destroy) {
         Device* device = reinterpret_cast<Device*>(cDevice);
         Texture* texture = reinterpret_cast<Texture*>(cTexture);
 
@@ -79,11 +99,18 @@ namespace dawn_native { namespace vulkan {
         }
 
         ExternalSemaphoreHandle outHandle;
-        if (device->ConsumedError(device->SignalAndExportExternalTexture(texture, &outHandle))) {
+        if (device->ConsumedError(device->SignalAndExportExternalTexture(texture, &outHandle, destroy))) {
             return -1;
         }
 
         return outHandle;
+    }
+
+    WGPUTexture WrapVulkanImageVkImage(WGPUDevice cDevice,
+                                       const ExternalImageDescriptorVkImage* descriptor) {
+        Device* device = reinterpret_cast<Device*>(cDevice);
+        TextureBase* textureOut = device->CreateTextureWrappingVulkanImage(descriptor, descriptor->image, descriptor->waitSemaphores);
+        return reinterpret_cast<WGPUTexture>(textureOut);
     }
 #endif
 

@@ -18,6 +18,8 @@
 #include <atomic>
 #include <cstdint>
 
+#include "common/Assert.h"
+
 namespace dawn_native {
 
     class RefCounted {
@@ -25,11 +27,20 @@ namespace dawn_native {
         RefCounted();
         virtual ~RefCounted();
 
-        uint64_t GetRefCount() const;
-
-        // Dawn API
-        void Reference();
-        void Release();
+        inline uint64_t GetRefCount() const {
+            return mRefCount;
+        }
+        inline void Reference() {
+            ASSERT(mRefCount != 0);
+            mRefCount++;
+        }
+        inline void Release() {
+            ASSERT(mRefCount != 0);
+            mRefCount--;
+            if (mRefCount == 0) {
+                delete this;
+            }
+        }
 
       protected:
         std::atomic_uint64_t mRefCount = {1};

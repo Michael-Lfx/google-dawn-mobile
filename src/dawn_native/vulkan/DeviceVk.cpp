@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <stdio.h>
+
 #include "dawn_native/vulkan/DeviceVk.h"
 
 #include "common/Platform.h"
@@ -630,14 +632,35 @@ namespace dawn_native { namespace vulkan {
         return {};
     }
 
+    MaybeError Device::ImportImageWaitFDs(Texture* texture,
+                                          std::vector<int> waitHandles) {
+        //fprintf(stderr, "ImportImageWaitFDs %p\n", texture);
+
+        std::vector<VkSemaphore> waitSemaphores;
+        waitSemaphores.reserve(waitHandles.size());
+        for (const ExternalSemaphoreHandle& handle : waitHandles) {
+            VkSemaphore semaphore = VK_NULL_HANDLE;
+            DAWN_TRY_ASSIGN(semaphore, mExternalSemaphoreService->ImportSemaphore(handle));
+            waitSemaphores.push_back(semaphore);
+        }
+
+        DAWN_TRY(texture->SyncFromExternal(std::move(waitSemaphores)));
+
+        return {};
+    }
+
     MaybeError Device::SignalAndExportExternalTexture(Texture* texture,
-                                                      ExternalSemaphoreHandle* outHandle) {
+                                                      ExternalSemaphoreHandle* outHandle,
+                                                      bool destroy) {
+        //fprintf(stderr, "SignalAndExportExternalTexture %p destroy=%d\n", texture, destroy);
+
         DAWN_TRY(ValidateObject(texture));
 
         VkSemaphore outSignalSemaphore;
-        DAWN_TRY(texture->SignalAndDestroy(&outSignalSemaphore));
+        outSignalSemaphore = mExternalSemaphoreService->CreateExportableSemaphore().AcquireSuccess();
+        DAWN_TRY(texture->Signal(&outSignalSemaphore, destroy));
 
-        // This has to happen right after SignalAndDestroy, since the semaphore will be
+        // This has to happen right after Signal, since the semaphore will be
         // deleted when the fenced deleter runs after the queue submission
         DAWN_TRY_ASSIGN(*outHandle, mExternalSemaphoreService->ExportSemaphore(outSignalSemaphore));
 
@@ -645,6 +668,7 @@ namespace dawn_native { namespace vulkan {
     }
 
     TextureBase* Device::CreateTextureWrappingVulkanImage(
+        Texture* texture,
         const ExternalImageDescriptor* descriptor,
         ExternalMemoryHandle memoryHandle,
         const std::vector<ExternalSemaphoreHandle>& waitHandles) {
@@ -659,30 +683,64 @@ namespace dawn_native { namespace vulkan {
             return nullptr;
         }
 
-        VkSemaphore signalSemaphore = VK_NULL_HANDLE;
-        VkDeviceMemory allocation = VK_NULL_HANDLE;
         std::vector<VkSemaphore> waitSemaphores;
         waitSemaphores.reserve(waitHandles.size());
 
-        // Cleanup in case of a failure, the image creation doesn't acquire the external objects
-        // if a failure happems.
-        Texture* result = nullptr;
-        if (ConsumedError(ImportExternalImage(descriptor, memoryHandle, waitHandles,
-                                              &signalSemaphore, &allocation, &waitSemaphores)) ||
-            ConsumedError(Texture::CreateFromExternal(this, descriptor, textureDescriptor,
-                                                      signalSemaphore, allocation, waitSemaphores),
-                          &result)) {
-            // Clear the signal semaphore
-            fn.DestroySemaphore(GetVkDevice(), signalSemaphore, nullptr);
-
-            // Clear image memory
-            fn.FreeMemory(GetVkDevice(), allocation, nullptr);
-
-            // Clear any wait semaphores we were able to import
-            for (VkSemaphore semaphore : waitSemaphores) {
-                fn.DestroySemaphore(GetVkDevice(), semaphore, nullptr);
+        if (texture) {
+            //fprintf(stderr, "Sync existing texture %p\n", texture);
+            // Re-use existing texture
+            for (const ExternalSemaphoreHandle& handle : waitHandles) {
+                VkSemaphore semaphore = VK_NULL_HANDLE;
+                semaphore = mExternalSemaphoreService->ImportSemaphore(handle).AcquireSuccess();
+                waitSemaphores.push_back(semaphore);
             }
-            return nullptr;
+
+            //signalSemaphore = mExternalSemaphoreService->CreateExportableSemaphore().AcquireSuccess();
+            ConsumedError(texture->SyncFromExternal(waitSemaphores));
+            return texture;
+        } else {
+
+            //fprintf(stderr, "Create texture ");
+
+            VkSemaphore signalSemaphore = VK_NULL_HANDLE;
+            VkDeviceMemory allocation = VK_NULL_HANDLE;
+
+            // Cleanup in case of a failure, the image creation doesn't acquire the external objects
+            // if a failure happems.
+            Texture* result = nullptr;
+            if (ConsumedError(ImportExternalImage(descriptor, memoryHandle, waitHandles,
+                                                &signalSemaphore, &allocation, &waitSemaphores)) ||
+                ConsumedError(Texture::CreateFromExternal(this, descriptor, textureDescriptor,
+                                                        signalSemaphore, allocation, waitSemaphores),
+                            &result)) {
+                // Clear the signal semaphore
+                fn.DestroySemaphore(GetVkDevice(), signalSemaphore, nullptr);
+
+                // Clear image memory
+                fn.FreeMemory(GetVkDevice(), allocation, nullptr);
+
+                // Clear any wait semaphores we were able to import
+                for (VkSemaphore semaphore : waitSemaphores) {
+                    fn.DestroySemaphore(GetVkDevice(), semaphore, nullptr);
+                }
+                return nullptr;
+            }
+            //fprintf(stderr, " %p\n", result);
+            return result;
+        }
+    }
+
+    TextureBase* Device::CreateTextureWrappingVulkanImage(
+            const ExternalImageDescriptor* descriptor,
+            VkImage image,
+            const std::vector<VkSemaphore>& waitSemaphores) {
+        Texture* result = nullptr;
+        const TextureDescriptor* textureDescriptor =
+            reinterpret_cast<const TextureDescriptor*>(descriptor->cTextureDescriptor);
+
+        if (ConsumedError(Texture::CreateFromVkImage(this, descriptor, textureDescriptor,
+                                                     image, waitSemaphores),
+                            &result)) {
         }
 
         return result;

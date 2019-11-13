@@ -50,6 +50,13 @@ namespace dawn_native { namespace vulkan {
             VkDeviceMemory externalMemoryAllocation,
             std::vector<VkSemaphore> waitSemaphores);
 
+        static ResultOrError<Texture*> CreateFromVkImage(
+            Device* device,
+            const ExternalImageDescriptor* descriptor,
+            const TextureDescriptor* textureDescriptor,
+            VkImage image,
+            std::vector<VkSemaphore> waitSemaphores);
+
         Texture(Device* device, const TextureDescriptor* descriptor, VkImage nativeImage);
         ~Texture();
 
@@ -67,7 +74,8 @@ namespace dawn_native { namespace vulkan {
                                                  uint32_t baseArrayLayer,
                                                  uint32_t layerCount);
 
-        MaybeError SignalAndDestroy(VkSemaphore* outSignalSemaphore);
+        MaybeError Signal(VkSemaphore* outSignalSemaphore, bool destroy);
+        MaybeError SyncFromExternal(std::vector<VkSemaphore> waitSemaphores);
 
       private:
         using TextureBase::TextureBase;
@@ -75,6 +83,9 @@ namespace dawn_native { namespace vulkan {
         MaybeError InitializeFromExternal(const ExternalImageDescriptor* descriptor,
                                           VkSemaphore signalSemaphore,
                                           VkDeviceMemory externalMemoryAllocation,
+                                          std::vector<VkSemaphore> waitSemaphores);
+        MaybeError InitializeFromVkImage(const ExternalImageDescriptor* descriptor,
+                                          VkImage image,
                                           std::vector<VkSemaphore> waitSemaphores);
 
         void DestroyImpl() override;

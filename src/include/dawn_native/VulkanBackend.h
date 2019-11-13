@@ -33,6 +33,8 @@ namespace dawn_native { namespace vulkan {
     };
 
     DAWN_NATIVE_EXPORT VkInstance GetInstance(WGPUDevice device);
+    DAWN_NATIVE_EXPORT VkDevice GetDevice(WGPUDevice device);
+    DAWN_NATIVE_EXPORT VkQueue GetQueue(WGPUDevice device);
 
     DAWN_NATIVE_EXPORT PFN_vkVoidFunction GetInstanceProcAddr(WGPUDevice device, const char* pName);
 
@@ -56,12 +58,28 @@ namespace dawn_native { namespace vulkan {
         // On failure, returns a nullptr
         DAWN_NATIVE_EXPORT WGPUTexture
         WrapVulkanImageOpaqueFD(WGPUDevice cDevice,
+                                WGPUTexture cTexture,
                                 const ExternalImageDescriptorOpaqueFD* descriptor);
+
+        DAWN_NATIVE_EXPORT
+        void ImportImageWaitFDs(WGPUDevice cDevice, WGPUTexture cTexture, std::vector<int> waitFDs);
 
         // Exports a signal semaphore from a wrapped texture. This must be called on wrapped
         // textures before they are destroyed. On failure, returns -1
         DAWN_NATIVE_EXPORT int ExportSignalSemaphoreOpaqueFD(WGPUDevice cDevice,
-                                                             WGPUTexture cTexture);
+                                                             WGPUTexture cTexture,
+                                                             bool destroy);
+
+        // Descriptor for opaque file descriptor image import
+        struct ExternalImageDescriptorVkImage : ExternalImageDescriptor {
+            VkImage image;
+            std::vector<VkSemaphore> waitSemaphores;
+        };
+
+        DAWN_NATIVE_EXPORT WGPUTexture
+        WrapVulkanImageVkImage(WGPUDevice cDevice,
+                               const ExternalImageDescriptorVkImage* descriptor);
+
 #endif  // __linux__
 }}  // namespace dawn_native::vulkan
 

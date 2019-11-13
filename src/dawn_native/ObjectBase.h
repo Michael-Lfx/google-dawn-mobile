@@ -30,8 +30,12 @@ namespace dawn_native {
         ObjectBase(DeviceBase* device, ErrorTag tag);
         virtual ~ObjectBase();
 
-        DeviceBase* GetDevice() const;
-        bool IsError() const;
+        inline DeviceBase* GetDevice() const {
+            return mDevice;
+        }
+        inline bool IsError() const {
+            return mIsError;
+        }
 
       private:
         DeviceBase* mDevice;
