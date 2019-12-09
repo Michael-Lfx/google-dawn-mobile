@@ -18,7 +18,13 @@
 #include "dawn/webgpu.h"
 #include "dawn_native/DawnNative.h"
 
+#include "common/Platform.h"
+
+#if defined(DAWN_PLATFORM_IOS)
+#    define GLFWwindow void
+#else
 struct GLFWwindow;
+#endif  // defined(DAWN_PLATFORM_IOS)
 
 namespace utils {
 

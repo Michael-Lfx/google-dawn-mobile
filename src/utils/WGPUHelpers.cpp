@@ -17,15 +17,20 @@
 #include "common/Assert.h"
 #include "common/Constants.h"
 #include "common/Log.h"
+#include "common/Platform.h"
 
-#include <shaderc/shaderc.hpp>
+#if defined(DAWN_ENABLE_SPIR_V)
+#    include <shaderc/shaderc.hpp>
+#endif  // defined(DAWN_ENABLE_SPIR_V)
 
 #include <cstring>
 #include <iomanip>
 #include <sstream>
+#include <vector>
 
 namespace utils {
 
+#if defined(DAWN_ENABLE_SPIR_V)
     namespace {
 
         shaderc_shader_kind ShadercShaderKind(SingleShaderStage stage) {
@@ -112,7 +117,7 @@ namespace utils {
 
         return CreateShaderModuleFromResult(device, result);
     }
-
+#endif  // defined(DAWN_ENABLE_SPIR_V)
     wgpu::Buffer CreateBufferFromData(const wgpu::Device& device,
                                       const void* data,
                                       uint64_t size,

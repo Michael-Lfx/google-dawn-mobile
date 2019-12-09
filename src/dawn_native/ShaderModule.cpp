@@ -20,14 +20,17 @@
 #include "dawn_native/Pipeline.h"
 #include "dawn_native/PipelineLayout.h"
 
-#include <spirv-tools/libspirv.hpp>
-#include <spirv_cross.hpp>
+#if defined(DAWN_ENABLE_SPIR_V)
+#    include <spirv-tools/libspirv.hpp>
+#    include <spirv_cross.hpp>
+#endif  // defined(DAWN_ENABLE_SPIR_V)
 
 #include <sstream>
 
 namespace dawn_native {
 
     namespace {
+#if defined(DAWN_ENABLE_SPIR_V)
         Format::Type SpirvCrossBaseTypeToFormatType(spirv_cross::SPIRType::BaseType spirvBaseType) {
             switch (spirvBaseType) {
                 case spirv_cross::SPIRType::Float:
@@ -65,7 +68,7 @@ namespace dawn_native {
                     return wgpu::TextureViewDimension::Undefined;
             }
         }
-
+#endif  // defined(DAWN_ENABLE_SPIR_V)
     }  // anonymous namespace
 
     MaybeError ValidateShaderModuleDescriptor(DeviceBase*,
@@ -73,7 +76,7 @@ namespace dawn_native {
         if (descriptor->nextInChain != nullptr) {
             return DAWN_VALIDATION_ERROR("nextInChain must be nullptr");
         }
-
+#if defined(DAWN_ENABLE_SPIR_V)
         spvtools::SpirvTools spirvTools(SPV_ENV_VULKAN_1_1);
 
         std::ostringstream errorStream;
@@ -103,7 +106,7 @@ namespace dawn_native {
         if (!spirvTools.Validate(descriptor->code, descriptor->codeSize)) {
             return DAWN_VALIDATION_ERROR(errorStream.str().c_str());
         }
-
+#endif  // defined(DAWN_ENABLE_SPIR_V)
         return {};
     }
 
@@ -129,6 +132,7 @@ namespace dawn_native {
         return new ShaderModuleBase(device, ObjectBase::kError);
     }
 
+#if defined(DAWN_ENABLE_SPIR_V)
     void ShaderModuleBase::ExtractSpirvInfo(const spirv_cross::Compiler& compiler) {
         ASSERT(!IsError());
 
@@ -275,6 +279,7 @@ namespace dawn_native {
             }
         }
     }
+#endif  // defined(DAWN_ENABLE_SPIR_V)
 
     const ShaderModuleBase::ModuleBindingInfo& ShaderModuleBase::GetBindingInfo() const {
         ASSERT(!IsError());
