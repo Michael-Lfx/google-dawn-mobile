@@ -24,7 +24,9 @@
 
 #include "dawn_native/dawn_platform.h"
 
-#include "spvc/spvc.hpp"
+#if defined(DAWN_ENABLE_SPIR_V)
+#    include "spvc/spvc.hpp"
+#endif  // defined(DAWN_ENABLE_SPIR_V)
 
 #include <array>
 #include <bitset>
@@ -45,9 +47,9 @@ namespace dawn_native {
         ~ShaderModuleBase() override;
 
         static ShaderModuleBase* MakeError(DeviceBase* device);
-
+#if defined(DAWN_ENABLE_SPIR_V)
         void ExtractSpirvInfo(const spirv_cross::Compiler& compiler);
-
+#endif  // defined(DAWN_ENABLE_SPIR_V)
         struct BindingInfo {
             // The SPIRV ID of the resource.
             uint32_t id;
@@ -82,7 +84,9 @@ namespace dawn_native {
         };
 
       protected:
+#if defined(DAWN_ENABLE_SPIR_V)
         shaderc_spvc::Context mSpvcContext;
+#endif  // defined(DAWN_ENABLE_SPIR_V)
 
       private:
         ShaderModuleBase(DeviceBase* device, ObjectBase::ErrorTag tag);

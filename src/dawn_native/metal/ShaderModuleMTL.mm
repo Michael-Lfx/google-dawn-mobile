@@ -18,14 +18,16 @@
 #include "dawn_native/metal/DeviceMTL.h"
 #include "dawn_native/metal/PipelineLayoutMTL.h"
 
-#include <spirv_msl.hpp>
+#if defined(DAWN_ENABLE_SPIR_V)
+#    include <spirv_msl.hpp>
+#endif  // !defined(DAWN_ENABLE_SPIR_V)
 
 #include <sstream>
 
 namespace dawn_native { namespace metal {
 
     namespace {
-
+#if defined(DAWN_ENABLE_SPIR_V)
         spv::ExecutionModel SpirvExecutionModelForStage(SingleShaderStage stage) {
             switch (stage) {
                 case SingleShaderStage::Vertex:
@@ -38,6 +40,7 @@ namespace dawn_native { namespace metal {
                     UNREACHABLE();
             }
         }
+#endif  // defined(DAWN_ENABLE_SPIR_V)
     }  // namespace
 
     // static
@@ -55,6 +58,7 @@ namespace dawn_native { namespace metal {
     }
 
     MaybeError ShaderModule::Initialize(const ShaderModuleDescriptor* descriptor) {
+#if defined(DAWN_ENABLE_SPIR_V)
         mSpirv.assign(descriptor->code, descriptor->code + descriptor->codeSize);
         if (GetDevice()->IsToggleEnabled(Toggle::UseSpvc)) {
             shaderc_spvc::CompileOptions options;
@@ -71,12 +75,14 @@ namespace dawn_native { namespace metal {
             spirv_cross::CompilerMSL compiler(mSpirv);
             ExtractSpirvInfo(compiler);
         }
+#endif  // defined(DAWN_ENABLE_SPIR_V)
         return {};
     }
 
     ShaderModule::MetalFunctionData ShaderModule::GetFunction(const char* functionName,
                                                               SingleShaderStage functionStage,
                                                               const PipelineLayout* layout) const {
+#if defined(DAWN_ENABLE_SPIR_V)
         std::unique_ptr<spirv_cross::CompilerMSL> compiler_impl;
         spirv_cross::CompilerMSL* compiler;
         if (GetDevice()->IsToggleEnabled(Toggle::UseSpvc)) {
@@ -140,9 +146,9 @@ namespace dawn_native { namespace metal {
                 }
             }
         }
-
+#endif  // defined(DAWN_ENABLE_SPIR_V)
         MetalFunctionData result;
-
+#if defined(DAWN_ENABLE_SPIR_V)
         {
             spv::ExecutionModel executionModel = SpirvExecutionModelForStage(functionStage);
             auto size = compiler->get_entry_point(functionName, executionModel).workgroup_size;
@@ -177,7 +183,12 @@ namespace dawn_native { namespace metal {
         }
 
         result.needsStorageBufferLength = compiler->needs_buffer_size_buffer();
-
+#else
+     // fixme
+        {
+            
+        }
+#endif  // defined(DAWN_ENABLE_SPIR_V)
         return result;
     }
 

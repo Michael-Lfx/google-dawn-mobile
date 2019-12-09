@@ -228,6 +228,7 @@ namespace dawn_native { namespace metal {
 
     std::vector<std::unique_ptr<AdapterBase>> Backend::DiscoverDefaultAdapters() {
         std::vector<std::unique_ptr<AdapterBase>> adapters;
+        bool shouldCreateSystemDefaultDevice = false;
 
         if (@available(macOS 10.11, *)) {
 #if defined(DAWN_PLATFORM_MACOS)
@@ -238,16 +239,22 @@ namespace dawn_native { namespace metal {
             }
 
             [devices release];
-#endif
+#elif defined(DAWN_PLATFORM_IOS)
+            // Simulator goes here.
+            shouldCreateSystemDefaultDevice = true;
+#endif  // defined(DAWN_PLATFORM_MACOS)
         } else if (@available(iOS 8.0, *)) {
+            shouldCreateSystemDefaultDevice = true;
+        } else {
+            UNREACHABLE();
+        }
+        if (shouldCreateSystemDefaultDevice) {
 #if defined(DAWN_PLATFORM_IOS)
             // iOS only has a single device so MTLCopyAllDevices doesn't exist there.
             adapters.push_back(
                 std::make_unique<Adapter>(GetInstance(), MTLCreateSystemDefaultDevice()));
-#endif
-        } else {
-            UNREACHABLE();
-        }
+#endif  // defined(DAWN_PLATFORM_IOS)
+            }
         return adapters;
     }
 
