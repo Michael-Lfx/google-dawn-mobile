@@ -127,11 +127,11 @@ void init() {
     wgpu::ShaderModule vsModule =
         utils::CreateShaderModule(device, utils::SingleShaderStage::Vertex, R"(
         #version 450
-        layout(set = 0, binding = 0) uniform cameraData {
+        layout(binding = 0) uniform cameraData {
             mat4 view;
             mat4 proj;
         } camera;
-        layout(set = 0, binding = 1) uniform modelData {
+        layout(binding = 1) uniform modelData {
             mat4 modelMatrix;
         };
         layout(location = 0) in vec3 pos;
