@@ -28,10 +28,12 @@ namespace utils {
 
     enum class SingleShaderStage { Vertex, Fragment, Compute };
 
+#if defined(DAWN_ENABLE_SPIR_V)
     wgpu::ShaderModule CreateShaderModule(const wgpu::Device& device,
                                           SingleShaderStage stage,
                                           const char* source);
     wgpu::ShaderModule CreateShaderModuleFromASM(const wgpu::Device& device, const char* source);
+#endif  // defined(DAWN_ENABLE_SPIR_V)
 
     wgpu::Buffer CreateBufferFromData(const wgpu::Device& device,
                                       const void* data,

@@ -359,13 +359,19 @@ namespace dawn_native { namespace metal {
             descriptorMTL.stencilAttachmentPixelFormat = MetalPixelFormat(depthStencilFormat);
         }
 
+#if defined(DAWN_ENABLE_SPIR_V)
         const ShaderModuleBase::FragmentOutputBaseTypes& fragmentOutputBaseTypes =
             descriptor->fragmentStage->module->GetFragmentOutputBaseTypes();
+#endif  // defined(DAWN_ENABLE_SPIR_V)
         for (uint32_t i : IterateBitSet(GetColorAttachmentsMask())) {
             descriptorMTL.colorAttachments[i].pixelFormat =
                 MetalPixelFormat(GetColorAttachmentFormat(i));
             const ColorStateDescriptor* descriptor = GetColorStateDescriptor(i);
+#if defined(DAWN_ENABLE_SPIR_V)
             bool isDeclaredInFragmentShader = fragmentOutputBaseTypes[i] != Format::Other;
+#else
+            bool isDeclaredInFragmentShader = true;
+#endif  // defined(DAWN_ENABLE_SPIR_V)
             ComputeBlendDesc(descriptorMTL.colorAttachments[i], descriptor,
                              isDeclaredInFragmentShader);
         }

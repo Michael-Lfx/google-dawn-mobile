@@ -18,7 +18,9 @@
 #include "dawn_native/vulkan/FencedDeleter.h"
 #include "dawn_native/vulkan/VulkanError.h"
 
-#include <spirv_cross.hpp>
+#if defined(DAWN_ENABLE_SPIR_V)
+#    include <spirv_cross.hpp>
+#endif  // defined(DAWN_ENABLE_SPIR_V)
 
 namespace dawn_native { namespace vulkan {
 
@@ -37,6 +39,7 @@ namespace dawn_native { namespace vulkan {
     }
 
     MaybeError ShaderModule::Initialize(const ShaderModuleDescriptor* descriptor) {
+#if defined(DAWN_ENABLE_SPIR_V)
         // Use SPIRV-Cross to extract info from the SPIRV even if Vulkan consumes SPIRV. We want to
         // have a translation step eventually anyway.
         if (GetDevice()->IsToggleEnabled(Toggle::UseSpvc)) {
@@ -54,6 +57,7 @@ namespace dawn_native { namespace vulkan {
             spirv_cross::Compiler compiler(descriptor->code, descriptor->codeSize);
             ExtractSpirvInfo(compiler);
         }
+#endif  // defined(DAWN_ENABLE_SPIR_V)
 
         VkShaderModuleCreateInfo createInfo;
         createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;

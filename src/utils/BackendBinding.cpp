@@ -16,7 +16,9 @@
 
 #include "common/Compiler.h"
 
-#include "GLFW/glfw3.h"
+#if defined(DAWN_PLATFORM_MACOS)
+#    include "GLFW/glfw3.h"
+#endif  // defined(DAWN_PLATFORM_MACOS)
 
 #if defined(DAWN_ENABLE_BACKEND_OPENGL)
 #    include "dawn_native/OpenGLBackend.h"
@@ -45,6 +47,7 @@ namespace utils {
     }
 
     void SetupGLFWWindowHintsForBackend(dawn_native::BackendType type) {
+#if defined(DAWN_PLATFORM_MACOS)
         if (type == dawn_native::BackendType::OpenGL) {
             glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
             glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
@@ -53,6 +56,7 @@ namespace utils {
         } else {
             glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         }
+#endif  // defined(DAWN_PLATFORM_MACOS)
     }
 
     void DiscoverAdapter(dawn_native::Instance* instance,

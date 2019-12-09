@@ -18,14 +18,17 @@
 #include "dawn_native/metal/DeviceMTL.h"
 #include "dawn_native/metal/PipelineLayoutMTL.h"
 
-#include <spirv_msl.hpp>
+#if defined(DAWN_ENABLE_SPIR_V)
+#    include <spirv_msl.hpp>
+#endif  // !defined(DAWN_ENABLE_SPIR_V)
 
 #include <sstream>
 
 namespace dawn_native { namespace metal {
 
     namespace {
-
+    
+#if defined(DAWN_ENABLE_SPIR_V)
         spv::ExecutionModel SpirvExecutionModelForStage(SingleShaderStage stage) {
             switch (stage) {
                 case SingleShaderStage::Vertex:
@@ -57,6 +60,8 @@ namespace dawn_native { namespace metal {
 
             return options;
         }
+#endif  // defined(DAWN_ENABLE_SPIR_V)
+    
     }  // namespace
 
     // static
@@ -74,6 +79,7 @@ namespace dawn_native { namespace metal {
     }
 
     MaybeError ShaderModule::Initialize(const ShaderModuleDescriptor* descriptor) {
+#if defined(DAWN_ENABLE_SPIR_V)
         mSpirv.assign(descriptor->code, descriptor->code + descriptor->codeSize);
         if (GetDevice()->IsToggleEnabled(Toggle::UseSpvc)) {
             shaderc_spvc_status status = mSpvcContext.InitializeForMsl(
@@ -89,6 +95,7 @@ namespace dawn_native { namespace metal {
             spirv_cross::CompilerMSL compiler(mSpirv);
             ExtractSpirvInfo(compiler);
         }
+#endif  // defined(DAWN_ENABLE_SPIR_V)
         return {};
     }
 
@@ -98,6 +105,7 @@ namespace dawn_native { namespace metal {
                                          ShaderModule::MetalFunctionData* out) const {
         ASSERT(!IsError());
         ASSERT(out);
+#if defined(DAWN_ENABLE_SPIR_V)
         std::unique_ptr<spirv_cross::CompilerMSL> compiler_impl;
         spirv_cross::CompilerMSL* compiler;
         if (GetDevice()->IsToggleEnabled(Toggle::UseSpvc)) {
@@ -191,7 +199,22 @@ namespace dawn_native { namespace metal {
         }
 
         out->needsStorageBufferLength = compiler->needs_buffer_size_buffer();
-
+#else
+        {
+            auto mtlDevice = ToBackend(GetDevice())->GetMTLDevice();
+            static id<MTLLibrary> defaultLibrary;
+            static dispatch_once_t onceToken;
+            dispatch_once(&onceToken, ^{
+                defaultLibrary = [mtlDevice newDefaultLibrary]; // fixme newLibraryWithFile:error:
+            });
+            NSString* name = [NSString stringWithFormat:@"%s", functionName];
+            out->function = [defaultLibrary newFunctionWithName:name];
+            if (out->function == nil) {
+                NSLog(@"MTLDevice cannot find %s from default library", functionName);
+                return DAWN_VALIDATION_ERROR("Unable to find function from default library");
+            }
+        }
+#endif  // defined(DAWN_ENABLE_SPIR_V)
         return {};
     }
 

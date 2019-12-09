@@ -106,6 +106,11 @@ std::string GetExecutablePath() {
     // TODO: Implement on Fuchsia
     return "";
 }
+#elif defined(DAWN_PLATFORM_IOS)
+std::string GetExecutablePath() {
+    // fixme
+    return std::string();
+}
 #else
 #    error "Implement GetExecutablePath for your platform."
 #endif
