@@ -245,10 +245,10 @@ namespace dawn_native { namespace metal {
         id<MTLCommandBuffer> commandBuffer = GetPendingCommandBuffer();
         id<MTLBlitCommandEncoder> encoder = [commandBuffer blitCommandEncoder];
         [encoder copyFromBuffer:uploadBuffer
-                   sourceOffset:sourceOffset
+                   sourceOffset:static_cast<NSUInteger>(sourceOffset)
                        toBuffer:buffer
-              destinationOffset:destinationOffset
-                           size:size];
+              destinationOffset:static_cast<NSUInteger>(destinationOffset)
+                           size:static_cast<NSUInteger>(size)];
         [encoder endEncoding];
 
         return {};

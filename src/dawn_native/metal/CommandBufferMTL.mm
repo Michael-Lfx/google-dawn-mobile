@@ -333,7 +333,7 @@ namespace dawn_native { namespace metal {
             bool needWorkaround = bufferSize - bufferOffset < bytesPerImage * copyExtent.depth;
             if (!needWorkaround) {
                 copy.count = 1;
-                copy.copies[0].bufferOffset = bufferOffset;
+                copy.copies[0].bufferOffset = static_cast<NSUInteger>(bufferOffset);
                 copy.copies[0].bytesPerRow = rowPitch;
                 copy.copies[0].bytesPerImage = bytesPerImage;
                 copy.copies[0].textureOrigin = MakeMTLOrigin(origin);
@@ -346,7 +346,7 @@ namespace dawn_native { namespace metal {
 
             // Doing all the copy except the last image.
             if (copyExtent.depth > 1) {
-                copy.copies[copy.count].bufferOffset = currentOffset;
+                copy.copies[copy.count].bufferOffset = static_cast<NSUInteger>(currentOffset);
                 copy.copies[copy.count].bytesPerRow = rowPitch;
                 copy.copies[copy.count].bytesPerImage = bytesPerImage;
                 copy.copies[copy.count].textureOrigin = MakeMTLOrigin(origin);
@@ -362,7 +362,7 @@ namespace dawn_native { namespace metal {
             // Doing all the copy in last image except the last row.
             uint32_t copyBlockRowCount = copyExtent.height / textureFormat.blockHeight;
             if (copyBlockRowCount > 1) {
-                copy.copies[copy.count].bufferOffset = currentOffset;
+                copy.copies[copy.count].bufferOffset = static_cast<NSUInteger>(currentOffset);
                 copy.copies[copy.count].bytesPerRow = rowPitch;
                 copy.copies[copy.count].bytesPerImage = rowPitch * (copyBlockRowCount - 1);
                 copy.copies[copy.count].textureOrigin =
@@ -386,7 +386,7 @@ namespace dawn_native { namespace metal {
                 textureFormat.blockHeight + clampedCopyExtentHeight - copyExtent.height;
             ASSERT(lastRowCopyExtentHeight <= textureFormat.blockHeight);
 
-            copy.copies[copy.count].bufferOffset = currentOffset;
+            copy.copies[copy.count].bufferOffset = static_cast<NSUInteger>(currentOffset);
             copy.copies[copy.count].bytesPerRow = lastRowDataSize;
             copy.copies[copy.count].bytesPerImage = lastRowDataSize;
             copy.copies[copy.count].textureOrigin =
@@ -467,7 +467,7 @@ namespace dawn_native { namespace metal {
                             const BufferBinding& binding =
                                 group->GetBindingAsBufferBinding(bindingIndex);
                             const id<MTLBuffer> buffer = ToBackend(binding.buffer)->GetMTLBuffer();
-                            NSUInteger offset = binding.offset;
+                            NSUInteger offset = static_cast<NSUInteger>(binding.offset);
 
                             // TODO(shaobo.yan@intel.com): Record bound buffer status to use
                             // setBufferOffset to achieve better performance.
@@ -632,10 +632,10 @@ namespace dawn_native { namespace metal {
 
                     encoders.EnsureBlit(commandBuffer);
                     [encoders.blit copyFromBuffer:ToBackend(copy->source)->GetMTLBuffer()
-                                     sourceOffset:copy->sourceOffset
+                                     sourceOffset:static_cast<NSUInteger>(copy->sourceOffset)
                                          toBuffer:ToBackend(copy->destination)->GetMTLBuffer()
-                                destinationOffset:copy->destinationOffset
-                                             size:copy->size];
+                                destinationOffset:static_cast<NSUInteger>(copy->destinationOffset)
+                                             size:static_cast<NSUInteger>(copy->size)];
                 } break;
 
                 case Command::CopyBufferToTexture: {
@@ -990,7 +990,7 @@ namespace dawn_native { namespace metal {
                                        indexBuffer:indexBuffer
                                  indexBufferOffset:indexBufferBaseOffset
                                     indirectBuffer:indirectBuffer
-                              indirectBufferOffset:draw->indirectOffset];
+                              indirectBufferOffset:static_cast<NSUInteger>(draw->indirectOffset)];
                 } break;
 
                 case Command::InsertDebugMarker: {
