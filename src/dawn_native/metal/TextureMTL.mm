@@ -26,7 +26,7 @@ namespace dawn_native { namespace metal {
             return usage & kUsageNeedsTextureView;
         }
 
-        MTLTextureUsage MetalTextureUsage(wgpu::TextureUsage usage) {
+        MTLTextureUsage MetalTextureUsage(wgpu::TextureUsage usage) API_AVAILABLE(macos(10.11), ios(9.0)) {
             MTLTextureUsage result = MTLTextureUsageUnknown;  // This is 0
 
             if (usage & (wgpu::TextureUsage::Storage)) {
@@ -74,7 +74,11 @@ namespace dawn_native { namespace metal {
                 case wgpu::TextureViewDimension::Cube:
                     return MTLTextureTypeCube;
                 case wgpu::TextureViewDimension::CubeArray:
-                    return MTLTextureTypeCubeArray;
+                    if (@available(macOS 10.11, iOS 11, *)) {
+                        return MTLTextureTypeCubeArray;
+                    } else {
+                        ASSERT(0);
+                    }
                 default:
                     UNREACHABLE();
                     return MTLTextureType2D;
@@ -124,6 +128,7 @@ namespace dawn_native { namespace metal {
 #if defined(DAWN_PLATFORM_MACOS)
         MTLStorageMode kIOSurfaceStorageMode = MTLStorageModeManaged;
 #elif defined(DAWN_PLATFORM_IOS)
+        API_AVAILABLE(ios(9.0))
         MTLStorageMode kIOSurfaceStorageMode = MTLStorageModePrivate;
 #else
 #    error "Unsupported Apple platform."
@@ -212,7 +217,11 @@ namespace dawn_native { namespace metal {
             case wgpu::TextureFormat::Depth24Plus:
                 return MTLPixelFormatDepth32Float;
             case wgpu::TextureFormat::Depth24PlusStencil8:
-                return MTLPixelFormatDepth32Float_Stencil8;
+                if (@available(macOS 10.11, iOS 9.0, *)) {
+                    return MTLPixelFormatDepth32Float_Stencil8;
+                } else {
+                    ASSERT(0);
+                }
 
 #if defined(DAWN_PLATFORM_MACOS)
             case wgpu::TextureFormat::BC1RGBAUnorm:
@@ -297,7 +306,9 @@ namespace dawn_native { namespace metal {
         MTLTextureDescriptor* mtlDesc = [MTLTextureDescriptor new];
         mtlDesc.textureType = MetalTextureType(descriptor->dimension, descriptor->arrayLayerCount,
                                                descriptor->sampleCount);
-        mtlDesc.usage = MetalTextureUsage(descriptor->usage);
+        if (@available(macOS 10.11, iOS 9, *)) {
+            mtlDesc.usage = MetalTextureUsage(descriptor->usage);
+        }
         mtlDesc.pixelFormat = MetalPixelFormat(descriptor->format);
 
         mtlDesc.width = descriptor->size.width;
@@ -306,7 +317,9 @@ namespace dawn_native { namespace metal {
 
         mtlDesc.mipmapLevelCount = descriptor->mipLevelCount;
         mtlDesc.arrayLength = descriptor->arrayLayerCount;
-        mtlDesc.storageMode = MTLStorageModePrivate;
+        if (@available(macOS 10.11, iOS 9, *)) {
+            mtlDesc.storageMode = MTLStorageModePrivate;
+        }
 
         mtlDesc.sampleCount = descriptor->sampleCount;
 
@@ -331,10 +344,14 @@ namespace dawn_native { namespace metal {
                      uint32_t plane)
         : TextureBase(device, descriptor, TextureState::OwnedInternal) {
         MTLTextureDescriptor* mtlDesc = CreateMetalTextureDescriptor(descriptor);
-        mtlDesc.storageMode = kIOSurfaceStorageMode;
-        mMtlTexture = [device->GetMTLDevice() newTextureWithDescriptor:mtlDesc
-                                                             iosurface:ioSurface
-                                                                 plane:plane];
+        if (@available(macOS 10.11, iOS 9, *)) {
+            mtlDesc.storageMode = kIOSurfaceStorageMode;
+        }
+        if (@available(macOS 10.11, iOS 11, *)) {
+            mMtlTexture = [device->GetMTLDevice() newTextureWithDescriptor:mtlDesc
+                                                                 iosurface:ioSurface
+                                                                     plane:plane];
+        }
         [mtlDesc release];
     }
 
@@ -369,10 +386,12 @@ namespace dawn_native { namespace metal {
             auto arrayLayerRange =
                 NSMakeRange(descriptor->baseArrayLayer, descriptor->arrayLayerCount);
 
-            mMtlTextureView = [mtlTexture newTextureViewWithPixelFormat:format
-                                                            textureType:textureViewType
-                                                                 levels:mipLevelRange
-                                                                 slices:arrayLayerRange];
+            if (@available(macOS 10.11, iOS 9, *)) {
+                mMtlTextureView = [mtlTexture newTextureViewWithPixelFormat:format
+                                                                textureType:textureViewType
+                                                                     levels:mipLevelRange
+                                                                     slices:arrayLayerRange];
+            }
         }
     }
 

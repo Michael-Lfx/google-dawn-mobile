@@ -167,14 +167,18 @@ namespace dawn_native { namespace metal {
                                                          uint32_t height) {
             MTLTextureDescriptor* mtlDesc = [MTLTextureDescriptor new];
             mtlDesc.textureType = MTLTextureType2D;
-            mtlDesc.usage = MTLTextureUsageRenderTarget;
+            if (@available(macOS 10.11, iOS 9, *)) {
+                mtlDesc.usage = MTLTextureUsageRenderTarget;
+            }
             mtlDesc.pixelFormat = mtlFormat;
             mtlDesc.width = width;
             mtlDesc.height = height;
             mtlDesc.depth = 1;
             mtlDesc.mipmapLevelCount = 1;
             mtlDesc.arrayLength = 1;
-            mtlDesc.storageMode = MTLStorageModePrivate;
+            if (@available(macOS 10.11, iOS 9, *)) {
+                mtlDesc.storageMode = MTLStorageModePrivate;
+            }
             mtlDesc.sampleCount = 1;
             id<MTLTexture> resolveTexture =
                 [device->GetMTLDevice() newTextureWithDescriptor:mtlDesc];
@@ -227,17 +231,23 @@ namespace dawn_native { namespace metal {
                 if (stagesToApply & wgpu::ShaderStage::Vertex) {
                     uint32_t bufferCount = ToBackend(pipeline->GetLayout())
                                                ->GetBufferBindingCount(SingleShaderStage::Vertex);
-                    [render setVertexBytes:data[SingleShaderStage::Vertex].data()
-                                    length:sizeof(uint32_t) * bufferCount
-                                   atIndex:kBufferLengthBufferSlot];
+                    if (@available(macOS 10.11, iOS 8.3, *)) {
+                        [render setVertexBytes:data[SingleShaderStage::Vertex].data()
+                                        length:sizeof(uint32_t) * bufferCount
+                                       atIndex:kBufferLengthBufferSlot];
+                    } else {
+                        ASSERT(0);
+                    }
                 }
 
                 if (stagesToApply & wgpu::ShaderStage::Fragment) {
                     uint32_t bufferCount = ToBackend(pipeline->GetLayout())
                                                ->GetBufferBindingCount(SingleShaderStage::Fragment);
-                    [render setFragmentBytes:data[SingleShaderStage::Fragment].data()
-                                      length:sizeof(uint32_t) * bufferCount
-                                     atIndex:kBufferLengthBufferSlot];
+                    if (@available(macOS 10.11, iOS 8.3, *)) {
+                        [render setFragmentBytes:data[SingleShaderStage::Fragment].data()
+                                          length:sizeof(uint32_t) * bufferCount
+                                         atIndex:kBufferLengthBufferSlot];
+                    }
                 }
 
                 // Only mark clean stages that were actually applied.
@@ -255,9 +265,11 @@ namespace dawn_native { namespace metal {
 
                 uint32_t bufferCount = ToBackend(pipeline->GetLayout())
                                            ->GetBufferBindingCount(SingleShaderStage::Compute);
-                [compute setBytes:data[SingleShaderStage::Compute].data()
-                           length:sizeof(uint32_t) * bufferCount
-                          atIndex:kBufferLengthBufferSlot];
+                if (@available(macOS 10.11, iOS 8.3, *)) {
+                    [compute setBytes:data[SingleShaderStage::Compute].data()
+                               length:sizeof(uint32_t) * bufferCount
+                              atIndex:kBufferLengthBufferSlot];
+                }
 
                 dirtyStages ^= wgpu::ShaderStage::Compute;
             }
@@ -755,10 +767,12 @@ namespace dawn_native { namespace metal {
 
                     Buffer* buffer = ToBackend(dispatch->indirectBuffer.Get());
                     id<MTLBuffer> indirectBuffer = buffer->GetMTLBuffer();
-                    [encoder dispatchThreadgroupsWithIndirectBuffer:indirectBuffer
-                                               indirectBufferOffset:dispatch->indirectOffset
-                                              threadsPerThreadgroup:lastPipeline
-                                                                        ->GetLocalWorkGroupSize()];
+                    if (@available(macOS 10.11, iOS 9, *)) {
+                        [encoder dispatchThreadgroupsWithIndirectBuffer:indirectBuffer
+                                                   indirectBufferOffset:dispatch->indirectOffset
+                                                  threadsPerThreadgroup:lastPipeline
+                                                                            ->GetLocalWorkGroupSize()];
+                    }
                 } break;
 
                 case Command::SetComputePipeline: {
@@ -931,11 +945,13 @@ namespace dawn_native { namespace metal {
 
                     // The instance count must be non-zero, otherwise no-op
                     if (draw->instanceCount != 0) {
-                        [encoder drawPrimitives:lastPipeline->GetMTLPrimitiveTopology()
-                                    vertexStart:draw->firstVertex
-                                    vertexCount:draw->vertexCount
-                                  instanceCount:draw->instanceCount
-                                   baseInstance:draw->firstInstance];
+                        if (@available(macOS 10.11, iOS 9, *)) {
+                            [encoder drawPrimitives:lastPipeline->GetMTLPrimitiveTopology()
+                                        vertexStart:draw->firstVertex
+                                        vertexCount:draw->vertexCount
+                                      instanceCount:draw->instanceCount
+                                       baseInstance:draw->firstInstance];
+                        }
                     }
                 } break;
 
@@ -950,15 +966,17 @@ namespace dawn_native { namespace metal {
 
                     // The index and instance count must be non-zero, otherwise no-op
                     if (draw->indexCount != 0 && draw->instanceCount != 0) {
-                        [encoder drawIndexedPrimitives:lastPipeline->GetMTLPrimitiveTopology()
-                                            indexCount:draw->indexCount
-                                             indexType:lastPipeline->GetMTLIndexType()
-                                           indexBuffer:indexBuffer
-                                     indexBufferOffset:indexBufferBaseOffset +
-                                                       draw->firstIndex * formatSize
-                                         instanceCount:draw->instanceCount
-                                            baseVertex:draw->baseVertex
-                                          baseInstance:draw->firstInstance];
+                        if (@available(macOS 10.11, iOS 9, *)) {
+                            [encoder drawIndexedPrimitives:lastPipeline->GetMTLPrimitiveTopology()
+                                                indexCount:draw->indexCount
+                                                 indexType:lastPipeline->GetMTLIndexType()
+                                               indexBuffer:indexBuffer
+                                         indexBufferOffset:indexBufferBaseOffset +
+                                                            draw->firstIndex * formatSize
+                                             instanceCount:draw->instanceCount
+                                                baseVertex:draw->baseVertex
+                                              baseInstance:draw->firstInstance];
+                        }
                     }
                 } break;
 
@@ -971,9 +989,11 @@ namespace dawn_native { namespace metal {
 
                     Buffer* buffer = ToBackend(draw->indirectBuffer.Get());
                     id<MTLBuffer> indirectBuffer = buffer->GetMTLBuffer();
-                    [encoder drawPrimitives:lastPipeline->GetMTLPrimitiveTopology()
-                              indirectBuffer:indirectBuffer
-                        indirectBufferOffset:draw->indirectOffset];
+                    if (@available(macOS 10.11, iOS 9, *)) {
+                        [encoder drawPrimitives:lastPipeline->GetMTLPrimitiveTopology()
+                                 indirectBuffer:indirectBuffer
+                           indirectBufferOffset:draw->indirectOffset];
+                    }
                 } break;
 
                 case Command::DrawIndexedIndirect: {
@@ -985,12 +1005,14 @@ namespace dawn_native { namespace metal {
 
                     Buffer* buffer = ToBackend(draw->indirectBuffer.Get());
                     id<MTLBuffer> indirectBuffer = buffer->GetMTLBuffer();
-                    [encoder drawIndexedPrimitives:lastPipeline->GetMTLPrimitiveTopology()
-                                         indexType:lastPipeline->GetMTLIndexType()
-                                       indexBuffer:indexBuffer
-                                 indexBufferOffset:indexBufferBaseOffset
-                                    indirectBuffer:indirectBuffer
-                              indirectBufferOffset:static_cast<NSUInteger>(draw->indirectOffset)];
+                    if (@available(macOS 10.11, iOS 9, *)) {
+                        [encoder drawIndexedPrimitives:lastPipeline->GetMTLPrimitiveTopology()
+                                             indexType:lastPipeline->GetMTLIndexType()
+                                           indexBuffer:indexBuffer
+                                     indexBufferOffset:indexBufferBaseOffset
+                                        indirectBuffer:indirectBuffer
+                                  indirectBufferOffset:static_cast<NSUInteger>(draw->indirectOffset)];
+                    }
                 } break;
 
                 case Command::InsertDebugMarker: {

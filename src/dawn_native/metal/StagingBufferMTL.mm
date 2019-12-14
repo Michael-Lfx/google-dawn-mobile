@@ -23,8 +23,12 @@ namespace dawn_native { namespace metal {
 
     MaybeError StagingBuffer::Initialize() {
         const size_t bufferSize = GetSize();
+        MTLResourceOptions options = MTLResourceCPUCacheModeDefaultCache;
+        if (@available(macOS 10.11, iOS 9, *)) {
+            options = MTLResourceStorageModeShared;
+        }
         mBuffer = [mDevice->GetMTLDevice() newBufferWithLength:bufferSize
-                                                       options:MTLResourceStorageModeShared];
+                                                       options:options];
 
         if (mBuffer == nil) {
             return DAWN_OUT_OF_MEMORY_ERROR("Unable to allocate buffer.");

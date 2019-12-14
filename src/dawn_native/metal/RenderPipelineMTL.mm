@@ -113,7 +113,7 @@ namespace dawn_native { namespace metal {
         }
 
         MTLPrimitiveTopologyClass MTLInputPrimitiveTopology(
-            wgpu::PrimitiveTopology primitiveTopology) {
+            wgpu::PrimitiveTopology primitiveTopology) API_AVAILABLE(macos(10.11), ios(12.0)) {
             switch (primitiveTopology) {
                 case wgpu::PrimitiveTopology::PointList:
                     return MTLPrimitiveTopologyClassPoint;
@@ -376,7 +376,9 @@ namespace dawn_native { namespace metal {
                              isDeclaredInFragmentShader);
         }
 
-        descriptorMTL.inputPrimitiveTopology = MTLInputPrimitiveTopology(GetPrimitiveTopology());
+        if (@available(macOS 10.11, iOS 12, *)) {
+            descriptorMTL.inputPrimitiveTopology = MTLInputPrimitiveTopology(GetPrimitiveTopology());
+        }
 
         MTLVertexDescriptor* vertexDesc = MakeVertexDesc();
         descriptorMTL.vertexDescriptor = vertexDesc;

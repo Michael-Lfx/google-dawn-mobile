@@ -24,11 +24,13 @@ namespace dawn_native { namespace metal {
 
     Buffer::Buffer(Device* device, const BufferDescriptor* descriptor)
         : BufferBase(device, descriptor) {
-        MTLResourceOptions storageMode;
-        if (GetUsage() & (wgpu::BufferUsage::MapRead | wgpu::BufferUsage::MapWrite)) {
-            storageMode = MTLResourceStorageModeShared;
-        } else {
-            storageMode = MTLResourceStorageModePrivate;
+        MTLResourceOptions storageMode = MTLResourceCPUCacheModeDefaultCache;
+        if (@available(macOS 10.11, iOS 9, *)) {
+            if (GetUsage() & (wgpu::BufferUsage::MapRead | wgpu::BufferUsage::MapWrite)) {
+                storageMode = MTLResourceStorageModeShared;
+            } else {
+                storageMode = MTLResourceStorageModePrivate;
+            }
         }
 
         uint32_t currentSize = GetSize();
