@@ -267,6 +267,15 @@ namespace dawn_native { namespace metal {
         return new Texture(this, descriptor, ioSurface, plane);
     }
 
+    TextureBase* Device::CreateTextureWrappingCVMetalTexture(const TextureDescriptor* descriptor,
+                                                             CVMetalTextureRef metalTexture) {
+        if (ConsumedError(ValidateTextureDescriptor(this, descriptor))) {
+            return nullptr;
+        }
+
+        return new Texture(this, descriptor, CVMetalTextureGetTexture(metalTexture));
+    }
+
     void Device::WaitForCommandsToBeScheduled() {
         SubmitPendingCommandBuffer();
         [mLastSubmittedCommands waitUntilScheduled];

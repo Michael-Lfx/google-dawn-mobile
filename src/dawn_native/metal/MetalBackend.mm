@@ -45,6 +45,16 @@ namespace dawn_native { namespace metal {
         return WrapIOSurface(cDevice, cDescriptor, CVPixelBufferGetIOSurface(pixelBuffer), plane);
     }
 
+    DAWN_NATIVE_EXPORT WGPUTexture WrapCVMetalTexture(WGPUDevice cDevice,
+                                                      const WGPUTextureDescriptor* cDescriptor,
+                                                      CVMetalTextureRef metalTexture) {
+        Device* device = reinterpret_cast<Device*>(cDevice);
+        const TextureDescriptor* descriptor =
+            reinterpret_cast<const TextureDescriptor*>(cDescriptor);
+        TextureBase* texture = device->CreateTextureWrappingCVMetalTexture(descriptor, metalTexture);
+        return reinterpret_cast<WGPUTexture>(texture);
+    }
+
     void WaitForCommandsToBeScheduled(WGPUDevice cDevice) {
         Device* device = reinterpret_cast<Device*>(cDevice);
         device->WaitForCommandsToBeScheduled();

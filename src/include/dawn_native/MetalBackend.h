@@ -43,6 +43,10 @@ namespace dawn_native { namespace metal {
                                                      CVPixelBufferRef pixelBuffer,
                                                      uint32_t plane);
 
+    DAWN_NATIVE_EXPORT WGPUTexture WrapCVMetalTexture(WGPUDevice device,
+                                                      const WGPUTextureDescriptor* descriptor,
+                                                      CVMetalTextureRef metalTexture);
+
     // When making Metal interop with other APIs, we need to be careful that QueueSubmit doesn't
     // mean that the operations will be visible to other APIs/Metal devices right away. macOS
     // does have a global queue of graphics operations, but the command buffers are inserted there

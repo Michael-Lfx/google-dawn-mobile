@@ -57,6 +57,8 @@ namespace dawn_native { namespace metal {
         TextureBase* CreateTextureWrappingIOSurface(const TextureDescriptor* descriptor,
                                                     IOSurfaceRef ioSurface,
                                                     uint32_t plane);
+        TextureBase* CreateTextureWrappingCVMetalTexture(const TextureDescriptor* descriptor,
+                                                         CVMetalTextureRef metalTexture);
         void WaitForCommandsToBeScheduled();
 
         ResultOrError<std::unique_ptr<StagingBufferBase>> CreateStagingBuffer(size_t size) override;
