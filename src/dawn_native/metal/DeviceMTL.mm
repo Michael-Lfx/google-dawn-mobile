@@ -60,15 +60,26 @@ namespace dawn_native { namespace metal {
     void Device::InitTogglesFromDriver() {
         {
             bool haveStoreAndMSAAResolve = false;
+            bool haveBaseVertexAndInstanceDrawing = false;
 #if defined(DAWN_PLATFORM_MACOS)
             haveStoreAndMSAAResolve =
+                [mMtlDevice supportsFeatureSet:MTLFeatureSet_macOS_GPUFamily1_v2];
+            haveBaseVertexAndInstanceDrawing =
                 [mMtlDevice supportsFeatureSet:MTLFeatureSet_macOS_GPUFamily1_v2];
 #elif defined(DAWN_PLATFORM_IOS)
             haveStoreAndMSAAResolve =
                 [mMtlDevice supportsFeatureSet:MTLFeatureSet_iOS_GPUFamily3_v2];
+            /** Metal Feature Set Tables:
+             *      Apple GPU Family: MTLGPUFamilyApple3
+             *      GPUs in Family: A9, A10
+             *      Corresponding Feature Sets: iOS GPU family 3, tvOS GPU family 2
+             */
+            haveBaseVertexAndInstanceDrawing =
+                [mMtlDevice supportsFeatureSet:MTLFeatureSet_iOS_GPUFamily3_v1];
 #endif
             // On tvOS, we would need MTLFeatureSet_tvOS_GPUFamily2_v1.
             SetToggle(Toggle::EmulateStoreAndMSAAResolve, !haveStoreAndMSAAResolve);
+            SetToggle(Toggle::BaseVertexAndInstanceDrawing, haveBaseVertexAndInstanceDrawing);
         }
 
         // TODO(jiawei.shao@intel.com): tighten this workaround when the driver bug is fixed.

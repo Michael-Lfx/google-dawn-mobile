@@ -929,6 +929,8 @@ namespace dawn_native { namespace metal {
         VertexBufferTracker vertexBuffers;
         StorageBufferLengthTracker storageBufferLengths = {};
         BindGroupTracker bindGroups(&storageBufferLengths);
+        
+        Device* device = ToBackend(GetDevice());
 
         // This will be autoreleased
         id<MTLRenderCommandEncoder> encoder =
@@ -945,12 +947,22 @@ namespace dawn_native { namespace metal {
 
                     // The instance count must be non-zero, otherwise no-op
                     if (draw->instanceCount != 0) {
-                        if (@available(macOS 10.11, iOS 9, *)) {
+                        if (device->IsToggleEnabled(Toggle::BaseVertexAndInstanceDrawing)) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Weverything"
                             [encoder drawPrimitives:lastPipeline->GetMTLPrimitiveTopology()
                                         vertexStart:draw->firstVertex
                                         vertexCount:draw->vertexCount
                                       instanceCount:draw->instanceCount
                                        baseInstance:draw->firstInstance];
+#pragma clang diagnostic pop
+                        } else if (draw->firstInstance == 0) {
+                            [encoder drawPrimitives:lastPipeline->GetMTLPrimitiveTopology()
+                                        vertexStart:draw->firstVertex
+                                        vertexCount:draw->vertexCount
+                                      instanceCount:draw->instanceCount];
+                        } else {
+                            ASSERT(0);
                         }
                     }
                 } break;
@@ -966,7 +978,9 @@ namespace dawn_native { namespace metal {
 
                     // The index and instance count must be non-zero, otherwise no-op
                     if (draw->indexCount != 0 && draw->instanceCount != 0) {
-                        if (@available(macOS 10.11, iOS 9, *)) {
+                        if (device->IsToggleEnabled(Toggle::BaseVertexAndInstanceDrawing)) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Weverything"
                             [encoder drawIndexedPrimitives:lastPipeline->GetMTLPrimitiveTopology()
                                                 indexCount:draw->indexCount
                                                  indexType:lastPipeline->GetMTLIndexType()
@@ -976,6 +990,17 @@ namespace dawn_native { namespace metal {
                                              instanceCount:draw->instanceCount
                                                 baseVertex:draw->baseVertex
                                               baseInstance:draw->firstInstance];
+#pragma clang diagnostic pop
+                        } else if (draw->firstInstance == 0) {
+                            [encoder drawIndexedPrimitives:lastPipeline->GetMTLPrimitiveTopology()
+                                                indexCount:draw->indexCount
+                                                 indexType:lastPipeline->GetMTLIndexType()
+                                               indexBuffer:indexBuffer
+                                         indexBufferOffset:indexBufferBaseOffset +
+                                                            draw->firstIndex * formatSize
+                                             instanceCount:draw->instanceCount];
+                        } else {
+                            ASSERT(0);
                         }
                     }
                 } break;

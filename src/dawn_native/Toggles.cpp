@@ -102,6 +102,10 @@ namespace dawn_native {
               "backend will use D32S8 (toggle to on) but setting the toggle to off will make it"
               "use the D24S8 format when possible.",
               "https://crbug.com/dawn/286"}},
+            {Toggle::BaseVertexAndInstanceDrawing,
+             {"base_vertex_and_instance_drawing",
+              "Only supported on MTLFeatureSet_iOS_GPUFamily3_v1 and later",
+              "https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf"}},
         }};
 
     }  // anonymous namespace

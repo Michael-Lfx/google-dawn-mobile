@@ -36,6 +36,7 @@ namespace dawn_native {
         UseSpvc,
         UseSpvcIRGen,
         VulkanUseD32S8,
+        BaseVertexAndInstanceDrawing,
 
         EnumCount,
         InvalidEnum = EnumCount,
